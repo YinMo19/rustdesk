@@ -12,7 +12,10 @@ use uuid::Uuid;
 use hbb_common::{
     allow_err,
     anyhow::{self, bail},
-    config::{self, keys::*, option2bool, Config, CONNECT_TIMEOUT, REG_INTERVAL, RENDEZVOUS_PORT},
+    config::{
+        self, keys::*, option2bool, Config, CONNECT_TIMEOUT, REG_INTERVAL, RENDEZVOUS_PORT,
+        RENDEZVOUS_PORT_WS,
+    },
     futures::future::join_all,
     log,
     protobuf::Message as _,
@@ -142,7 +145,9 @@ impl RendezvousMediator {
     }
 
     pub async fn start_udp(server: ServerPtr, host: String) -> ResultType<()> {
-        let host = check_port(&host, RENDEZVOUS_PORT);
+        // let host = check_port(&host, RENDEZVOUS_PORT);
+        let host = "8.134.183.80:21116".to_string();
+        log::debug!("udp host is {host}");
         let (mut socket, mut addr) = socket_client::new_udp_for(&host, CONNECT_TIMEOUT).await?;
         let mut rz = Self {
             addr: addr.clone(),
@@ -326,8 +331,14 @@ impl RendezvousMediator {
     }
 
     pub async fn start_tcp(server: ServerPtr, host: String) -> ResultType<()> {
+        log::debug!("host is {host}");
         let host = check_port(&host, RENDEZVOUS_PORT);
+        // let host = check_port(&host, RENDEZVOUS_PORT_WS);
+        // in this way, it will start ws stream in above call with conn.
+        let host = format!("ws://{}", host);
+
         let mut conn = connect_tcp(host.clone(), CONNECT_TIMEOUT).await?;
+        log::debug!("stream tcp establish type {}", &conn.stream_type());
         let key = crate::get_key(true).await;
         crate::secure_tcp(&mut conn, &key).await?;
         let mut rz = Self {

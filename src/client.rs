@@ -47,7 +47,8 @@ use hbb_common::{
     bail,
     config::{
         self, Config, LocalConfig, PeerConfig, PeerInfoSerde, Resolution, CONNECT_TIMEOUT,
-        READ_TIMEOUT, RELAY_PORT, RENDEZVOUS_PORT, RENDEZVOUS_SERVERS,
+        READ_TIMEOUT, RELAY_PORT, RELAY_PORT_WS, RENDEZVOUS_PORT, RENDEZVOUS_PORT_WS,
+        RENDEZVOUS_SERVERS,
     },
     fs::JobType,
     get_version_number, log,
@@ -215,7 +216,12 @@ impl Client {
         if hbb_common::is_ip_str(peer) {
             return Ok((
                 (
-                    connect_tcp(check_port(peer, RELAY_PORT + 1), CONNECT_TIMEOUT).await?,
+                    connect_tcp(
+                        format!("ws://{}", check_port(peer, RELAY_PORT + 3)),
+                        // check_port(peer, RELAY_PORT + 1),
+                        CONNECT_TIMEOUT,
+                    )
+                    .await?,
                     true,
                     None,
                 ),
@@ -225,7 +231,11 @@ impl Client {
         // Allow connect to {domain}:{port}
         if hbb_common::is_domain_port_str(peer) {
             return Ok((
-                (connect_tcp(peer, CONNECT_TIMEOUT).await?, true, None),
+                (
+                    connect_tcp(format!("ws://{}", peer), CONNECT_TIMEOUT).await?,
+                    true,
+                    None,
+                ),
                 (0, "".to_owned()),
             ));
         }
@@ -241,7 +251,8 @@ impl Client {
         } else {
             if other_server == PUBLIC_SERVER {
                 (
-                    check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT),
+                    check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT_WS),
+                    // check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT),
                     RENDEZVOUS_SERVERS[1..]
                         .iter()
                         .map(|x| x.to_string())
@@ -249,16 +260,24 @@ impl Client {
                     true,
                 )
             } else {
-                (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
+                (
+                    check_port(other_server, RENDEZVOUS_PORT_WS),
+                    Vec::new(),
+                    true,
+                )
+                // (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
             }
         };
 
+        let mut rendezvous_server = format!("ws://{}", &*rendezvous_server);
         let mut socket = connect_tcp(&*rendezvous_server, CONNECT_TIMEOUT).await;
+
         debug_assert!(!servers.contains(&rendezvous_server));
         if socket.is_err() && !servers.is_empty() {
             log::info!("try the other servers: {:?}", servers);
             for server in servers {
-                let server = check_port(server, RENDEZVOUS_PORT);
+                // let server = check_port(server, RENDEZVOUS_PORT);
+                let server = format!("ws://{}", check_port(server, RENDEZVOUS_PORT_WS));
                 socket = connect_tcp(&*server, CONNECT_TIMEOUT).await;
                 if socket.is_ok() {
                     rendezvous_server = server;
@@ -271,6 +290,11 @@ impl Client {
         }
         log::info!("rendezvous server: {}", rendezvous_server);
         let mut socket = socket?;
+        match socket {
+            hbb_common::Stream::WebSocket(_) => log::debug!("client start stream type: WebSocket"),
+            _ => log::debug!("client start stream type: tcp"),
+        }
+
         let my_addr = socket.local_addr();
         let mut signed_id_pk = Vec::new();
         let mut relay_server = "".to_owned();
@@ -644,12 +668,14 @@ impl Client {
         conn_type: ConnType,
         ipv4: bool,
     ) -> ResultType<Stream> {
-        let mut conn = connect_tcp(
-            ipv4_to_ipv6(check_port(relay_server, RELAY_PORT), ipv4),
-            CONNECT_TIMEOUT,
-        )
-        .await
-        .with_context(|| "Failed to connect to relay server")?;
+        let host = format!(
+            // "{}",
+            "ws://{}",
+            ipv4_to_ipv6(check_port(relay_server, RELAY_PORT_WS), ipv4)
+        );
+        let mut conn = connect_tcp(host, CONNECT_TIMEOUT)
+            .await
+            .with_context(|| "Failed to connect to relay server")?;
         let mut msg_out = RendezvousMessage::new();
         msg_out.set_request_relay(RequestRelay {
             licence_key: key.to_owned(),
@@ -3501,7 +3527,8 @@ async fn hc_connection_(
     let mut last_recv_msg = Instant::now();
     let mut keep_alive = crate::DEFAULT_KEEP_ALIVE;
 
-    let host = check_port(&rendezvous_server, RENDEZVOUS_PORT);
+    let host = format!("{}", check_port(&rendezvous_server, RENDEZVOUS_PORT));
+    // let host = format!("ws://{}", check_port(&rendezvous_server, RENDEZVOUS_PORT));
     let mut conn = connect_tcp(host.clone(), CONNECT_TIMEOUT).await?;
     let key = crate::get_key(true).await;
     crate::secure_tcp(&mut conn, &key).await?;

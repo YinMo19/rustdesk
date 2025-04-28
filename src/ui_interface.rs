@@ -5,7 +5,7 @@ use hbb_common::{
     bytes::Bytes,
     config::{
         self, keys::*, option2bool, Config, LocalConfig, PeerConfig, CONNECT_TIMEOUT,
-        RENDEZVOUS_PORT,
+        RENDEZVOUS_PORT, RENDEZVOUS_PORT_WS,
     },
     directories_next,
     futures::future::join_all,
@@ -1352,11 +1352,19 @@ async fn check_id(
     uuid: Bytes,
 ) -> &'static str {
     if let Ok(mut socket) = hbb_common::socket_client::connect_tcp(
-        crate::check_port(rendezvous_server, RENDEZVOUS_PORT),
+        format!(
+            "ws://{}",
+            // "{}",
+            crate::check_port(rendezvous_server, RENDEZVOUS_PORT_WS)
+        ),
         CONNECT_TIMEOUT,
     )
     .await
     {
+        match socket {
+            hbb_common::Stream::WebSocket(_) => log::debug!("ui check id stream type: WebSocket"),
+            _ => log::debug!("ui check id stream type: tcp"),
+        }
         let mut msg_out = Message::new();
         msg_out.set_register_pk(RegisterPk {
             old_id,
