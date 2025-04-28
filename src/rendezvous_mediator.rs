@@ -12,10 +12,7 @@ use uuid::Uuid;
 use hbb_common::{
     allow_err,
     anyhow::{self, bail},
-    config::{
-        self, keys::*, option2bool, Config, CONNECT_TIMEOUT, REG_INTERVAL, RENDEZVOUS_PORT,
-        RENDEZVOUS_PORT_WS,
-    },
+    config::{self, keys::*, option2bool, Config, CONNECT_TIMEOUT, REG_INTERVAL, RENDEZVOUS_PORT},
     futures::future::join_all,
     log,
     protobuf::Message as _,

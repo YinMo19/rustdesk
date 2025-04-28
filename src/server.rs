@@ -15,7 +15,7 @@ use hbb_common::{
     allow_err,
     anyhow::Context,
     bail,
-    config::{Config, CONNECT_TIMEOUT, RELAY_PORT_WS},
+    config::{Config, CONNECT_TIMEOUT, RELAY_PORT},
     log,
     message_proto::*,
     protobuf::{Enum, Message as _},
@@ -281,7 +281,7 @@ async fn create_relay_connection_(
     let mut stream = socket_client::connect_tcp(
         format!(
             "ws://{}",
-            socket_client::ipv4_to_ipv6(crate::check_port(relay_server, RELAY_PORT_WS), ipv4)
+            socket_client::ipv4_to_ipv6(crate::check_port(relay_server, RELAY_PORT), ipv4)
         ),
         CONNECT_TIMEOUT,
     )

@@ -47,8 +47,7 @@ use hbb_common::{
     bail,
     config::{
         self, Config, LocalConfig, PeerConfig, PeerInfoSerde, Resolution, CONNECT_TIMEOUT,
-        READ_TIMEOUT, RELAY_PORT, RELAY_PORT_WS, RENDEZVOUS_PORT, RENDEZVOUS_PORT_WS,
-        RENDEZVOUS_SERVERS,
+        READ_TIMEOUT, RELAY_PORT, RENDEZVOUS_PORT, RENDEZVOUS_SERVERS,
     },
     fs::JobType,
     get_version_number, log,
@@ -251,7 +250,7 @@ impl Client {
         } else {
             if other_server == PUBLIC_SERVER {
                 (
-                    check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT_WS),
+                    check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT),
                     // check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT),
                     RENDEZVOUS_SERVERS[1..]
                         .iter()
@@ -260,11 +259,7 @@ impl Client {
                     true,
                 )
             } else {
-                (
-                    check_port(other_server, RENDEZVOUS_PORT_WS),
-                    Vec::new(),
-                    true,
-                )
+                (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
                 // (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
             }
         };
@@ -277,7 +272,7 @@ impl Client {
             log::info!("try the other servers: {:?}", servers);
             for server in servers {
                 // let server = check_port(server, RENDEZVOUS_PORT);
-                let server = format!("ws://{}", check_port(server, RENDEZVOUS_PORT_WS));
+                let server = format!("ws://{}", check_port(server, RENDEZVOUS_PORT));
                 socket = connect_tcp(&*server, CONNECT_TIMEOUT).await;
                 if socket.is_ok() {
                     rendezvous_server = server;
@@ -671,7 +666,7 @@ impl Client {
         let host = format!(
             // "{}",
             "ws://{}",
-            ipv4_to_ipv6(check_port(relay_server, RELAY_PORT_WS), ipv4)
+            ipv4_to_ipv6(check_port(relay_server, RELAY_PORT), ipv4)
         );
         let mut conn = connect_tcp(host, CONNECT_TIMEOUT)
             .await

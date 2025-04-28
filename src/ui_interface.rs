@@ -5,7 +5,7 @@ use hbb_common::{
     bytes::Bytes,
     config::{
         self, keys::*, option2bool, Config, LocalConfig, PeerConfig, CONNECT_TIMEOUT,
-        RENDEZVOUS_PORT, RENDEZVOUS_PORT_WS,
+        RENDEZVOUS_PORT,
     },
     directories_next,
     futures::future::join_all,
@@ -1355,7 +1355,7 @@ async fn check_id(
         format!(
             "ws://{}",
             // "{}",
-            crate::check_port(rendezvous_server, RENDEZVOUS_PORT_WS)
+            crate::check_port(rendezvous_server, RENDEZVOUS_PORT)
         ),
         CONNECT_TIMEOUT,
     )
