@@ -149,6 +149,7 @@ pub fn new() -> ServerPtr {
             }
         }
     }
+    server.add_service(Box::new(terminal_service::new()));
     Arc::new(RwLock::new(server))
 }
 

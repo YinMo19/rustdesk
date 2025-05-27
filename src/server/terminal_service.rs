@@ -3,6 +3,45 @@ use hbb_common::message_proto::*;
 use portable_pty::{Child, CommandBuilder, PtySize};
 use std::io::{Read, Write};
 
+use hbb_common::tokio::time::{sleep, Duration};
+
+use super::*;
+use std::thread;
+pub const NAME: &'static str = "terminal";
+
+pub fn new() -> GenericService {
+    let svc = EmptyExtraFieldService::new(NAME.to_owned(), false); // 不需要snapshot功能
+    GenericService::run(&svc.clone(), run);
+    svc.sp
+}
+
+fn run(sp: EmptyExtraFieldService) -> ResultType<()> {
+    let server = CLIENT_SERVER.clone();
+
+    while sp.ok() {
+        // 同步方式检查终端输出
+        if let Some(output) = check_terminal_outputs(&server)? {
+            let mut msg = Message::new();
+            msg.set_terminal_response(output);
+            sp.send(msg);
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+    Ok(())
+}
+
+fn check_terminal_outputs(server: &ServerPtr) -> ResultType<Option<TerminalResponse>> {
+    let server = server.read().unwrap();
+    let mut sessions = server.terminal_sessions.blocking_lock();
+
+    for (_, session) in sessions.iter_mut() {
+        if let Ok(Some(output)) = session.read_output() {
+            return Ok(Some(output));
+        }
+    }
+    Ok(None)
+}
+
 pub struct TerminalService {
     id: i32,
     pty_pair: Option<portable_pty::PtyPair>,
