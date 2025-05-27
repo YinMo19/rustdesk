@@ -30,6 +30,7 @@ import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
 import 'mobile/pages/view_camera_page.dart';
+import 'mobile/pages/terminal_page.dart';
 import 'desktop/pages/remote_page.dart' as desktop_remote;
 import 'desktop/pages/file_manager_page.dart' as desktop_file_manager;
 import 'desktop/pages/view_camera_page.dart' as desktop_view_camera;
@@ -99,6 +100,7 @@ enum DesktopType {
   remote,
   fileTransfer,
   viewCamera,
+  remoteTerminal,
   cm,
   portForward,
 }
@@ -2317,7 +2319,8 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
   if (isMobile) {
     if (id != null) {
       final forceRelay = queryParameters["relay"] != null;
-      connect(Get.context!, id, forceRelay: forceRelay, password: queryParameters["password"]);
+      connect(Get.context!, id,
+          forceRelay: forceRelay, password: queryParameters["password"]);
       return null;
     }
   }
@@ -2341,6 +2344,7 @@ List<String>? urlLinkToCmdArgs(Uri uri) {
 connectMainDesktop(String id,
     {required bool isFileTransfer,
     required bool isViewCamera,
+    required bool isControlTerminal,
     required bool isTcpTunneling,
     required bool isRDP,
     bool? forceRelay,
@@ -2365,6 +2369,12 @@ connectMainDesktop(String id,
         isSharedPassword: isSharedPassword,
         connToken: connToken,
         forceRelay: forceRelay);
+  } else if (isControlTerminal) {
+    await rustDeskWinManager.newRemoteTerminal(id, isRDP,
+        password: password,
+        isSharedPassword: isSharedPassword,
+        connToken: connToken,
+        forceRelay: forceRelay);
   } else {
     await rustDeskWinManager.newRemoteDesktop(id,
         password: password,
@@ -2381,6 +2391,7 @@ connectMainDesktop(String id,
 connect(BuildContext context, String id,
     {bool isFileTransfer = false,
     bool isViewCamera = false,
+    bool isControlTerminal = false,
     bool isTcpTunneling = false,
     bool isRDP = false,
     bool forceRelay = false,
@@ -2413,6 +2424,7 @@ connect(BuildContext context, String id,
         id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
+        isControlTerminal: isControlTerminal,
         isTcpTunneling: isTcpTunneling,
         isRDP: isRDP,
         password: password,
@@ -2424,6 +2436,7 @@ connect(BuildContext context, String id,
         'id': id,
         'isFileTransfer': isFileTransfer,
         'isViewCamera': isViewCamera,
+        'isControlTerminal': isControlTerminal,
         'isTcpTunneling': isTcpTunneling,
         'isRDP': isRDP,
         'password': password,
@@ -2484,6 +2497,27 @@ connect(BuildContext context, String id,
             builder: (BuildContext context) => ViewCameraPage(
                 id: id, password: password, isSharedPassword: isSharedPassword),
           ),
+        );
+      }
+    } else if (isControlTerminal) {
+      if (isWeb) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (BuildContext context) => TerminalPage(
+              id: id,
+              password: password,
+              isSharedPassword: isSharedPassword,
+            ),
+          ),
+        );
+      } else {
+        rustDeskWinManager.newRemoteTerminal(
+          id,
+          isRDP,
+          password: password,
+          isSharedPassword: isSharedPassword,
+          forceRelay: forceRelay,
         );
       }
     } else {

@@ -41,6 +41,7 @@ use hbb_common::{
 };
 #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
 use hbb_common::{tokio::sync::Mutex as TokioMutex, ResultType};
+use portable_pty::{native_pty_system, CommandBuilder, PtySize, PtySystem};
 use scrap::CodecFormat;
 use std::{
     collections::HashMap,
@@ -77,6 +78,12 @@ pub struct Remote<T: InvokeUiSession> {
     video_threads: HashMap<usize, VideoThread>,
     chroma: Arc<RwLock<Option<Chroma>>>,
     last_record_state: bool,
+}
+
+struct TerminalSession {
+    child: Box<dyn portable_pty::Child>,
+    reader: Box<dyn std::io::Read + Send>,
+    writer: Box<dyn std::io::Write + Send>,
 }
 
 #[derive(Default)]

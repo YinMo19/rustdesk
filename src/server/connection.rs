@@ -247,6 +247,7 @@ pub struct Connection {
     multi_ui_session: bool,
     tx_from_authed: mpsc::UnboundedSender<ipc::Data>,
     printer_data: Vec<(Instant, String, Vec<u8>)>,
+    terminal_sessions: Arc<tokio::sync::Mutex<HashMap<i32, terminal_service::TerminalService>>>,
 }
 
 impl ConnInner {
@@ -323,6 +324,11 @@ impl Connection {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let tx_cloned = tx.clone();
+        let terminal_sessions = server
+            .upgrade()
+            .map(|s| s.read().unwrap().terminal_sessions.clone())
+            .unwrap_or_default();
+
         let mut conn = Self {
             inner: ConnInner {
                 id,
@@ -401,6 +407,7 @@ impl Connection {
             retina: Retina::default(),
             tx_from_authed,
             printer_data: Vec::new(),
+            terminal_sessions,
         };
         let addr = hbb_common::try_into_v4(addr);
         if !conn.on_open(addr).await {
@@ -1379,7 +1386,8 @@ impl Connection {
         }
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         if self.file_transfer.is_some() {
-            if crate::platform::is_prelogin() { // }|| self.tx_to_cm.send(ipc::Data::Test).is_err() {
+            if crate::platform::is_prelogin() {
+                // }|| self.tx_to_cm.send(ipc::Data::Test).is_err() {
                 username = "".to_owned();
             }
         }
@@ -3764,6 +3772,48 @@ impl Connection {
         };
         msg_out.set_message_box(res);
         self.send(msg_out).await;
+    }
+
+    async fn handle_terminal_request(&mut self, req: TerminalRequest) -> ResultType<()> {
+        let sessions = self.terminal_sessions.clone();
+        let mut sessions = sessions.lock().await;
+
+        let session_id = self.inner.id();
+
+        if let Some(session) = sessions.get_mut(&session_id) {
+            let response = session.handle_request(&req)?;
+            if !response.union.is_none() {
+                let mut msg = Message::new();
+                msg.set_terminal_response(response);
+                self.send(msg).await;
+            }
+        } else if let Some(terminal_request::Union::Open(_)) = req.union {
+            // Create new session for open requests
+            let mut session = terminal_service::TerminalService::new(session_id);
+            let response = session.handle_request(&req)?;
+
+            let mut msg = Message::new();
+            msg.set_terminal_response(response);
+            self.send(msg).await;
+
+            sessions.insert(session_id, session);
+        }
+
+        Ok(())
+    }
+
+    async fn check_terminal_output(&mut self) -> ResultType<()> {
+        let sessions = self.terminal_sessions.clone();
+        let mut sessions = sessions.lock().await;
+
+        if let Some(session) = sessions.get_mut(&self.inner.id()) {
+            if let Some(response) = session.read_output()? {
+                let mut msg = Message::new();
+                msg.set_terminal_response(response);
+                self.stream.send(&msg).await?;
+            }
+        }
+        Ok(())
     }
 }
 

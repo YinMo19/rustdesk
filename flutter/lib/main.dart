@@ -14,6 +14,7 @@ import 'package:flutter_hbb/desktop/screen/desktop_file_transfer_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_view_camera_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_port_forward_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_remote_screen.dart';
+import 'package:flutter_hbb/desktop/screen/desktop_remote_terminal_screen.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
@@ -30,6 +31,8 @@ import 'models/platform_model.dart';
 
 import 'package:flutter_hbb/plugin/handlers.dart'
     if (dart.library.html) 'package:flutter_hbb/web/plugin/handlers.dart';
+
+import 'package:flutter_hbb/terminal/terminal_ui.dart';
 
 /// Basic window and launch properties.
 int? kWindowId;
@@ -91,6 +94,12 @@ Future<void> main(List<String> args) async {
           kAppTypeDesktopPortForward,
         );
         break;
+      case WindowType.RemoteTerminal:
+        desktopType = DesktopType.remoteTerminal;
+        runMultiWindow(
+          argument,
+          kAppTypeDesktopRemoteTerminal,
+        );
       default:
         break;
     }
@@ -208,6 +217,11 @@ void runMultiWindow(
       break;
     case kAppTypeDesktopPortForward:
       widget = DesktopPortForwardScreen(
+        params: argument,
+      );
+      break;
+    case kAppTypeDesktopRemoteTerminal:
+      widget = DesktopRemoteTerminalScreen(
         params: argument,
       );
       break;

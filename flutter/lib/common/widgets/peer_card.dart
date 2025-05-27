@@ -491,6 +491,7 @@ abstract class BasePeerCard extends StatelessWidget {
     bool isViewCamera = false,
     bool isTcpTunneling = false,
     bool isRDP = false,
+    bool isControlTerminal = false,
   }) {
     return MenuEntryButton<String>(
       childBuilder: (TextStyle? style) => Text(
@@ -506,6 +507,7 @@ abstract class BasePeerCard extends StatelessWidget {
           isViewCamera: isViewCamera,
           isTcpTunneling: isTcpTunneling,
           isRDP: isRDP,
+          isControlTerminal: isControlTerminal,
         );
       },
       padding: menuPadding,
@@ -538,6 +540,15 @@ abstract class BasePeerCard extends StatelessWidget {
       context,
       translate('View camera'),
       isViewCamera: true,
+    );
+  }
+
+  @protected
+  MenuEntryBase<String> _controlTerminalAction(BuildContext context) {
+    return _connectCommonAction(
+      context,
+      translate('Control Remote Terminal'),
+      isControlTerminal: true,
     );
   }
 
@@ -892,6 +903,7 @@ class RecentPeerCard extends BasePeerCard {
       _connectAction(context),
       _transferFileAction(context),
       _viewCameraAction(context),
+      _controlTerminalAction(context),
     ];
 
     final List favs = (await bind.mainGetFav()).toList();
@@ -929,6 +941,7 @@ class RecentPeerCard extends BasePeerCard {
 
     menuItems.add(MenuEntryDivider());
     menuItems.add(_removeAction(peer.id));
+    menuItems.add(_controlTerminalAction(context));
     return menuItems;
   }
 
@@ -952,6 +965,7 @@ class FavoritePeerCard extends BasePeerCard {
       _connectAction(context),
       _transferFileAction(context),
       _viewCameraAction(context),
+      _controlTerminalAction(context),
     ];
     if (isDesktop && peer.platform != kPeerPlatformAndroid) {
       menuItems.add(_tcpTunnelingAction(context));
@@ -983,6 +997,7 @@ class FavoritePeerCard extends BasePeerCard {
 
     menuItems.add(MenuEntryDivider());
     menuItems.add(_removeAction(peer.id));
+    menuItems.add(_controlTerminalAction(context));
     return menuItems;
   }
 
@@ -1006,6 +1021,7 @@ class DiscoveredPeerCard extends BasePeerCard {
       _connectAction(context),
       _transferFileAction(context),
       _viewCameraAction(context),
+      _controlTerminalAction(context),
     ];
 
     final List favs = (await bind.mainGetFav()).toList();
@@ -1037,6 +1053,7 @@ class DiscoveredPeerCard extends BasePeerCard {
 
     menuItems.add(MenuEntryDivider());
     menuItems.add(_removeAction(peer.id));
+    menuItems.add(_controlTerminalAction(context));
     return menuItems;
   }
 
@@ -1060,6 +1077,7 @@ class AddressBookPeerCard extends BasePeerCard {
       _connectAction(context),
       _transferFileAction(context),
       _viewCameraAction(context),
+      _controlTerminalAction(context),
     ];
     if (isDesktop && peer.platform != kPeerPlatformAndroid) {
       menuItems.add(_tcpTunnelingAction(context));
@@ -1099,6 +1117,8 @@ class AddressBookPeerCard extends BasePeerCard {
       menuItems.add(MenuEntryDivider());
       menuItems.add(_removeAction(peer.id));
     }
+
+    menuItems.add(_controlTerminalAction(context));
     return menuItems;
   }
 
@@ -1193,6 +1213,7 @@ class MyGroupPeerCard extends BasePeerCard {
       _connectAction(context),
       _transferFileAction(context),
       _viewCameraAction(context),
+      _controlTerminalAction(context),
     ];
     if (isDesktop && peer.platform != kPeerPlatformAndroid) {
       menuItems.add(_tcpTunnelingAction(context));
@@ -1213,6 +1234,8 @@ class MyGroupPeerCard extends BasePeerCard {
     if (gFFI.userModel.userName.isNotEmpty) {
       menuItems.add(_addToAb(peer));
     }
+
+    menuItems.add(_controlTerminalAction(context));
     return menuItems;
   }
 
@@ -1416,12 +1439,11 @@ void connectInPeerTab(BuildContext context, Peer peer, PeerTabIndex tab,
     {bool isFileTransfer = false,
     bool isViewCamera = false,
     bool isTcpTunneling = false,
-    bool isRDP = false}) async {
+    bool isRDP = false,
+    bool isControlTerminal = false}) async {
   var password = '';
   bool isSharedPassword = false;
   if (tab == PeerTabIndex.ab) {
-    // If recent peer's alias is empty, set it to ab's alias
-    // Because the platform is not set, it may not take effect, but it is more important not to display if the connection is not successful
     if (peer.alias.isNotEmpty &&
         (await bind.mainGetPeerOption(id: peer.id, key: "alias")).isEmpty) {
       await bind.mainSetPeerAlias(
@@ -1440,6 +1462,7 @@ void connectInPeerTab(BuildContext context, Peer peer, PeerTabIndex tab,
       password: password,
       isSharedPassword: isSharedPassword,
       isFileTransfer: isFileTransfer,
+      isControlTerminal: isControlTerminal,
       isViewCamera: isViewCamera,
       isTcpTunneling: isTcpTunneling,
       isRDP: isRDP);

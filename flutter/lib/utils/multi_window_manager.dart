@@ -17,6 +17,7 @@ enum WindowType {
   FileTransfer,
   ViewCamera,
   PortForward,
+  RemoteTerminal,
   Unknown
 }
 
@@ -61,6 +62,7 @@ class RustDeskMultiWindowManager {
   final List<int> _fileTransferWindows = List.empty(growable: true);
   final List<int> _viewCameraWindows = List.empty(growable: true);
   final List<int> _portForwardWindows = List.empty(growable: true);
+  final List<int> _remoteTerminalWindows = List.empty(growable: true);
 
   moveTabToNewWindow(int windowId, String peerId, String sessionId,
       WindowType windowType) async {
@@ -343,6 +345,27 @@ class RustDeskMultiWindowManager {
     );
   }
 
+  Future<MultiWindowCallResult> newRemoteTerminal(
+    String remoteId,
+    bool isRDP, {
+    String? password,
+    bool? isSharedPassword,
+    bool? forceRelay,
+    String? connToken,
+  }) async {
+    return await newSession(
+      WindowType.RemoteTerminal,
+      kWindowEventNewRemoteTerminal,
+      remoteId,
+      _remoteTerminalWindows,
+      password: password,
+      forceRelay: forceRelay,
+      isRDP: isRDP,
+      isSharedPassword: isSharedPassword,
+      connToken: connToken,
+    );
+  }
+
   Future<MultiWindowCallResult> call(
       WindowType type, String methodName, dynamic args) async {
     final wnds = _findWindowsByType(type);
@@ -373,6 +396,8 @@ class RustDeskMultiWindowManager {
         return _viewCameraWindows;
       case WindowType.PortForward:
         return _portForwardWindows;
+      case WindowType.RemoteTerminal:
+        return _remoteTerminalWindows;
       case WindowType.Unknown:
         break;
     }
@@ -395,6 +420,8 @@ class RustDeskMultiWindowManager {
       case WindowType.PortForward:
         _portForwardWindows.clear();
         break;
+      case WindowType.RemoteTerminal:
+        _remoteTerminalWindows.clear();
       case WindowType.Unknown:
         break;
     }

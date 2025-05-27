@@ -33,6 +33,7 @@ use video_service::VideoSource;
 use crate::ipc::Data;
 
 pub mod audio_service;
+pub mod terminal_service;
 cfg_if::cfg_if! {
 if #[cfg(not(target_os = "ios"))] {
 mod clipboard_service;
@@ -95,6 +96,7 @@ pub struct Server {
     connections: ConnMap,
     services: HashMap<String, Box<dyn Service>>,
     id_count: i32,
+    terminal_sessions: Arc<tokio::sync::Mutex<HashMap<i32, terminal_service::TerminalService>>>,
 }
 
 pub type ServerPtr = Arc<RwLock<Server>>;
@@ -105,6 +107,7 @@ pub fn new() -> ServerPtr {
         connections: HashMap::new(),
         services: HashMap::new(),
         id_count: hbb_common::rand::random::<i32>() % 1000 + 1000, // ensure positive
+        terminal_sessions: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
     };
     server.add_service(Box::new(audio_service::new()));
     #[cfg(not(target_os = "ios"))]

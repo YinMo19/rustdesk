@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'platform_menu.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pty/flutter_pty.dart';
@@ -10,15 +9,6 @@ import 'package:xterm/xterm.dart';
 
 void main() {
   runApp(MyApp());
-}
-
-bool get isDesktop {
-  if (kIsWeb) return false;
-  return [
-    TargetPlatform.windows,
-    TargetPlatform.linux,
-    TargetPlatform.macOS,
-  ].contains(defaultTargetPlatform);
 }
 
 class MyApp extends StatelessWidget {
