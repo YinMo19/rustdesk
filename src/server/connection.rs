@@ -445,6 +445,7 @@ impl Connection {
         }
         let mut test_delay_timer =
             crate::rustdesk_interval(time::interval_at(Instant::now(), TEST_DELAY_TIMEOUT));
+
         let mut last_recv_time = Instant::now();
 
         conn.stream.set_send_timeout(
@@ -761,6 +762,11 @@ impl Connection {
                                 continue;
                             }
                         }
+                        Some(message::Union::TerminalRequest(req)) => {
+                            if let Err(err) = conn.handle_terminal_request(req.clone()).await {
+                                log::error!("Failed to handle terminal request: {}", err);
+                            }
+                        }
                         _ => {}
                     }
 
@@ -819,6 +825,16 @@ impl Connection {
                         }
                     }
                 }
+
+                _ = async {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    Ok::<(), anyhow::Error>(())
+                } => {
+                    if let Err(err) = conn.check_terminal_output().await {
+                        log::error!("Failed to check terminal output: {}", err);
+                    }
+                }
+
                 clip_file = rx_clip.recv() => match clip_file {
                     Some(_clip) => {
                         #[cfg(feature = "unix-file-copy-paste")]
